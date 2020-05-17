@@ -89,8 +89,22 @@ function IdOffsetRange{T}(r::AbstractUnitRange, offset::Integer = 0) where T<:In
     rc = convert(AbstractUnitRange{T}, r)::AbstractUnitRange{T}
     return IdOffsetRange{T,typeof(rc)}(rc, convert(T, offset))
 end
-IdOffsetRange(r::AbstractUnitRange{T}, offset::Integer = 0) where T<:Integer =
-    IdOffsetRange{T,typeof(r)}(r, convert(T, offset))
+import Base.convert
+Base.convert(T::Type{X},r::S where {L<:Integer, S<:AbstractUnitRange{L}}) where X<:Integer   =
+    UnitRange{T}(r.start, r.stop)
+    # UnitRange{T}(start, stop)
+
+Base.convert(T::Type{X},r::S) where X<:Integer where {L<:Integer, S<:Base.OneTo{L}}  =
+    Base.OneTo(T(r.stop))
+function IdOffsetRange(r::S, offset::T = 0)  where {L<:Integer, S<:AbstractUnitRange{L}} where T<:Integer
+    r=convert(T,r)
+    IdOffsetRange{T,typeof(r)}(r, offset)
+end
+    # AbstractUnitRange{T}
+
+# IdOffsetRange(r::AbstractUnitRange{T}, offset::Integer = 0) where T<:Integer =
+#         convert(T, offset)
+        # IdOffsetRange{T,typeof(r)}(r, convert(T, offset))
 
 # Coercion from other IdOffsetRanges
 IdOffsetRange{T,I}(r::IdOffsetRange{T,I}) where {T<:Integer,I<:AbstractUnitRange{T}} = r

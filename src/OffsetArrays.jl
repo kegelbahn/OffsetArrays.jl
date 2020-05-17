@@ -1,5 +1,4 @@
 module OffsetArrays
-
 using Base: Indices, tail, @propagate_inbounds
 @static if !isdefined(Base, :IdentityUnitRange)
     const IdentityUnitRange = Base.Slice
@@ -12,25 +11,27 @@ export OffsetArray, OffsetVector
 include("axes.jl")
 
 ## OffsetArray
-struct OffsetArray{T,N,AA<:AbstractArray} <: AbstractArray{T,N}
+struct OffsetArray{T,N,AA<:AbstractArray,S<:Integer} <: AbstractArray{T,N}
     parent::AA
-    offsets::NTuple{N,Int}
+    offsets::NTuple{N,S}
 end
-OffsetVector{T,AA<:AbstractArray} = OffsetArray{T,1,AA}
+OffsetVector{T,AA<:AbstractArray} = OffsetArray{T,1,AA} # ,Int64
 
 ## OffsetArray constructors
 
-offset(axparent::AbstractUnitRange, ax::AbstractUnitRange) = first(ax) - first(axparent)
+offset(axparent::AbstractUnitRange, ax::AbstractUnitRange{S}) where S = first(ax) - Base.convert(S,first(axparent)) #
 offset(axparent::AbstractUnitRange, ax::Integer) = 1 - first(axparent)
 
-function OffsetArray(A::AbstractArray{T,N}, offsets::NTuple{N,Int}) where {T,N}
-    OffsetArray{T,N,typeof(A)}(A, offsets)
+function OffsetArray(A::AbstractArray{T,N}, offsets::NTuple{N,S}) where {T,N,S<:Integer}
+    OffsetArray{T,N,typeof(A),S}(A, offsets)
 end
 OffsetArray(A::AbstractArray{T,0}, offsets::Tuple{}) where T =
-    OffsetArray{T,0,typeof(A)}(A, ())
+    OffsetArray{T,0,typeof(A),Union{}}(A, ())
 
-OffsetArray(A::AbstractArray{T,N}, offsets::Vararg{Int,N}) where {T,N} =
-    OffsetArray(A, offsets)
+# OffsetArray(A::AbstractArray{T,N}, offsets::Vararg{Int,N}) where {T,N} =
+#     OffsetArray(A, offsets)
+OffsetArray(A::AbstractArray{T,N}, offsets::Vararg{S,N}) where {T,N,S<:Integer} =
+        OffsetArray(A, offsets)
 OffsetArray(A::AbstractArray{T,0}) where {T} = OffsetArray(A, ())
 
 const ArrayInitializer = Union{UndefInitializer, Missing, Nothing}
@@ -62,7 +63,7 @@ julia> A[0, 1]
 5
 ```
 """
-function OffsetArray(A::AbstractArray{T,N}, inds::NTuple{N,AbstractUnitRange}) where {T,N}
+function OffsetArray(A::AbstractArray{T,N}, inds::NTuple{N,<:AbstractUnitRange} ) where {T,N} # S where S<:AbstractUnitRange
     axparent = axes(A)
     lA = map(length, axparent)
     lI = map(length, inds)
@@ -80,7 +81,7 @@ OffsetArray(A::OffsetArray{T,0}, inds::Tuple{}) where {T} = OffsetArray(parent(A
 # OffsetArray(A::OffsetArray{T,N}, inds::Tuple{}) where {T,N} = error("this should never be called")
 
 Base.IndexStyle(::Type{OA}) where {OA<:OffsetArray} = IndexStyle(parenttype(OA))
-parenttype(::Type{OffsetArray{T,N,AA}}) where {T,N,AA} = AA
+parenttype(::Type{OffsetArray{T,N,AA,S}}) where {T,N,AA,S} = AA
 parenttype(A::OffsetArray) = parenttype(typeof(A))
 
 Base.parent(A::OffsetArray) = A.parent
@@ -143,7 +144,7 @@ Base.falses(inds::NTuple{N, Union{Integer, AbstractUnitRange}}) where {N} =
 #   Δi = i - first(r)
 #   i′ = first(r.parent) + Δi
 # and one obtains the result below.
-parentindex(r::IdOffsetRange, i) = i - r.offset
+parentindex(r::IdOffsetRange, i) = convert(typeof(r.offset),i) - r.offset
 
 @propagate_inbounds function Base.getindex(A::OffsetArray{T,N}, I::Vararg{Int,N}) where {T,N}
     J = map(parentindex, axes(A), I)

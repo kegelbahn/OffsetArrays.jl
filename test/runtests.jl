@@ -24,7 +24,7 @@ using CatIndices: BidirectionalVector
     end
 
     ro = OffsetArrays.IdOffsetRange(Base.OneTo(3))
-    rs = OffsetArrays.IdOffsetRange(3:5, -2)
+    rs = OffsetArrays.IdOffsetRange(3:5, Int16(-2))
     @test typeof(ro) !== typeof(rs)
     @test same_value(ro, 1:3)
     check_indexed_by(ro, 1:3)
@@ -164,6 +164,7 @@ end
 @testset "Scalar indexing" begin
     A0 = [1 3; 2 4]
     A = OffsetArray(A0, (-1,2))
+    # A = OffsetArray(A0, (Int16(-1),Int16(2)))
     S = OffsetArray(view(A0, 1:2, 1:2), (-1,2))
 
     @test @inferred(A[0,3]) == @inferred(A[0,3,1]) == @inferred(A[1]) == @inferred(S[0,3]) == @inferred(S[0,3,1]) == @inferred(S[1]) == 1
