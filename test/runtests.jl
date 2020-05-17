@@ -34,6 +34,8 @@ using CatIndices: BidirectionalVector
     @test @inferred(OffsetArrays.IdOffsetRange{Int}(ro))   === ro
     @test @inferred(OffsetArrays.IdOffsetRange{Int16}(ro)) === OffsetArrays.IdOffsetRange(Base.OneTo(Int16(3)))
     @test @inferred(OffsetArrays.IdOffsetRange(ro))        === ro
+    @test parent(ro) === ro.parent
+    @test parent(rs) === rs.parent
     # construction/coercion preserves the values, altering the axes if needed
     r2 = @inferred(typeof(rs)(ro))
     @test typeof(r2) === typeof(rs)
@@ -541,6 +543,11 @@ end
     @test maximum(A) == maximum(parent(A))
     @test minimum(A) == minimum(parent(A))
     @test extrema(A) == extrema(parent(A))
+    @test sum(A) == sum(parent(A))
+    @test sum(A, dims=1) == OffsetArray(sum(parent(A), dims=1), A.offsets)
+    @test sum(A, dims=2) == OffsetArray(sum(parent(A), dims=2), A.offsets)
+    @test sum(A, dims=(1,2)) == OffsetArray(sum(parent(A), dims=(1,2)), A.offsets)
+    @test sum(view(OffsetArray(reshape(1:27, 3, 3, 3), 0, 0, 0), :, :, 1:2), dims=(2,3)) == reshape([51,57,63], 3, 1, 1)
     C = similar(A)
     cumsum!(C, A, dims = 1)
     @test parent(C) == cumsum(parent(A), dims = 1)
